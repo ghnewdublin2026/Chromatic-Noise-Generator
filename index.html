@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CHROMATIC NOISE — Colour Noise Studio</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Syne:wght@700;800;900&display=swap');
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --bg:#06060b;
+  --sf:#0d0d16;
+  --sf2:#131320;
+  --bd:rgba(255,255,255,0.07);
+  --txt:#d8d8e8;
+  --mut:#52526a;
+  --mono:'JetBrains Mono',monospace;
+  --dsp:'Syne',sans-serif;
+  --acc:#f0f0f0;
+}
+
+html,body{height:100%}
+
+body{
+  background:var(--bg);
+  color:var(--txt);
+  font-family:var(--mono);
+  font-size:12px;
+  line-height:1.5;
+  overflow-x:hidden;
+}
+
+body::after{
+  content:'';
+  position:fixed;
+  inset:0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.016) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,0.016) 1px,transparent 1px);
+  background-size:52px 52px;
+  pointer-events:none;
+  z-index:0;
+}
+
+.wrap{
+  position:relative;
+  z-index:1;
+  max-width:1100px;
+  margin:0 auto;
+  padding:36px 22px 88px;
+}
+
+/* ── HEADER ─────────────────────────────────────────────── */
+.hdr{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:34px;
+  padding-bottom:20px;
+  border-bottom:1px solid var(--bd);
+}
+
+.hdr-left h1{
+  font-family:var(--dsp);
+  font-weight:900;
+  font-size:26px;
+  letter-spacing:-0.03em;
+  color:#fff;
+  line-height:1;
+}
+
+.hdr-left p{
+  font-size:9px;
+  color:var(--mut);
+  letter-spacing:0.2em;
+  text-transform:uppercase;
+  margin-top:4px;
+}
+
+.hdr-beacon{
+  width:10px;height:10px;
+  border-radius:50%;
+  background:var(--acc);
+  box-shadow:0 0 10px 2px var(--acc);
+  transition:all 0.4s;
+  flex-shrink:0;
+}
+
+/* ── NOISE GRID ──────────────────────────────────────────── */
+.ngrid{
+  display:grid;
+  grid-template-columns:repeat(8,1fr);
+  gap:8px;
+  margin-bottom:18px;
+}
+
+@media(max-width:580px){.ngrid{grid-template-columns:repeat(4,1fr)}}
+
+.nc{
+  --c:#fff;
+  aspect-ratio:1;
+  background:var(--sf);
+  border:1px solid var(--bd);
+  border-radius:10px;
+  cursor:pointer;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  position:relative;
+  overflow:hidden;
+  transition:border-color 0.25s,box-shadow 0.25s;
+  user-select:none;
+}
+
+.nc::before{
+  content:'';
+  position:absolute;
+  inset:0;
+  background:radial-gradient(circle at 50% 75%,var(--c),transparent 65%);
+  opacity:0.1;
+  transition:opacity 0.3s;
+}
+
+.nc:hover{border-color:rgba(255,255,255,0.14)}
+.nc:hover::before{opacity:0.18}
+
+.nc.on{
+  border-color:var(--c);
+  box-shadow:0 0 20px -4px var(--c),inset 0 0 18px -8px var(--c);
+}
+.nc.on::before{opacity:0.22}
+
+.ndot{
+  width:22px;height:22px;
+  border-radius:50%;
+  background:var(--c);
+  box-shadow:0 0 8px 1px var(--c);
+  flex-shrink:0;
+  transition:box-shadow 0.3s;
+}
+.nc.on .ndot{box-shadow:0 0 18px 4px var(--c)}
+
+.nlbl{
+  font-family:var(--dsp);
+  font-weight:700;
+  font-size:10px;
+  text-transform:uppercase;
+  letter-spacing:0.05em;
+  color:var(--mut);
+  transition:color 0.2s;
+}
+.nc.on .nlbl{color:var(--c)}
+
+/* ── INFO PANEL ──────────────────────────────────────────── */
+.info{
+  background:var(--sf);
+  border:1px solid var(--bd);
+  border-left:3px solid var(--acc);
+  border-radius:10px;
+  padding:18px 22px;
+  margin-bottom:16px;
+  transition:border-left-color 0.3s;
+}
+
+.info-name{
+  font-family:var(--dsp);
+  font-weight:900;
+  font-size:17px;
+  color:var(--acc);
+  transition:color 0.3s;
+  margin-bottom:3px;
+}
+
+.info-spec{
+  font-size:9px;
+  color:var(--mut);
+  text-transform:uppercase;
+  letter-spacing:0.14em;
+  margin-bottom:10px;
+}
+
+.info-def{
+  font-size:11px;
+  line-height:1.78;
+  color:var(--txt);
+  margin-bottom:12px;
+}
+
+.tags{display:flex;gap:6px;flex-wrap:wrap}
+
+.tag{
+  font-size:9px;
+  padding:3px 9px;
+  border-radius:20px;
+  background:rgba(255,255,255,0.04);
+  border:1px solid rgba(255,255,255,0.08);
+  color:var(--mut);
+  letter-spacing:0.06em;
+  text-transform:uppercase;
+}
+
+/* ── VISUALISER ──────────────────────────────────────────── */
+.viz{
+  background:var(--sf);
+  border:1px solid var(--bd);
+  border-radius:10px;
+  overflow:hidden;
+  margin-bottom:18px;
+  position:relative;
+}
+
+canvas{display:block;width:100%;height:80px}
+
+/* ── PLAY ────────────────────────────────────────────────── */
+.play-wrap{display:flex;justify-content:center;margin-bottom:22px}
+
+.play{
+  width:64px;height:64px;
+  border-radius:50%;
+  border:1.5px solid var(--acc);
+  background:transparent;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  position:relative;
+  transition:all 0.3s;
+  color:var(--acc);
+}
+
+.play::before{
+  content:'';
+  position:absolute;
+  inset:-10px;
+  border-radius:50%;
+  border:1px solid var(--acc);
+  opacity:0.14;
+  transition:all 0.3s;
+}
+
+.play:hover{box-shadow:0 0 28px -6px var(--acc)}
+
+.play.going{
+  box-shadow:0 0 40px -8px var(--acc);
+}
+
+.play.going::before{
+  animation:ring 2.5s ease-in-out infinite;
+}
+
+@keyframes ring{
+  0%,100%{transform:scale(1);opacity:0.14}
+  50%{transform:scale(1.28);opacity:0.04}
+}
+
+.play svg{width:20px;height:20px;fill:currentColor;transition:fill 0.3s}
+
+/* ── CONTROLS GRID ───────────────────────────────────────── */
+.ctrls{
+  display:grid;
+  grid-template-columns:200px 1fr 1.2fr;
+  gap:12px;
+}
+
+@media(max-width:720px){.ctrls{grid-template-columns:1fr}}
+
+.panel{
+  background:var(--sf);
+  border:1px solid var(--bd);
+  border-radius:10px;
+  padding:18px;
+}
+
+.ptitle{
+  font-family:var(--dsp);
+  font-weight:700;
+  font-size:10px;
+  text-transform:uppercase;
+  letter-spacing:0.18em;
+  color:var(--mut);
+  margin-bottom:16px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.pdot{
+  width:5px;height:5px;
+  border-radius:50%;
+  background:var(--acc);
+  box-shadow:0 0 5px var(--acc);
+  flex-shrink:0;
+  transition:all 0.3s;
+}
+
+/* sliders */
+.cg{margin-bottom:14px}
+.cg:last-child{margin-bottom:0}
+
+.cl{
+  display:flex;
+  justify-content:space-between;
+  margin-bottom:7px;
+  font-size:9px;
+  text-transform:uppercase;
+  letter-spacing:0.1em;
+  color:var(--mut);
+}
+
+.cv{color:var(--acc);font-weight:700;transition:color 0.3s}
+
+input[type=range]{
+  -webkit-appearance:none;appearance:none;
+  width:100%;height:2px;
+  background:var(--sf2);
+  border-radius:2px;outline:none;cursor:pointer;
+}
+
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;
+  width:12px;height:12px;
+  border-radius:50%;
+  background:var(--acc);
+  box-shadow:0 0 6px var(--acc);
+  cursor:pointer;
+  transition:background 0.3s,box-shadow 0.3s;
+}
+input[type=range]::-moz-range-thumb{
+  width:12px;height:12px;border-radius:50%;border:none;
+  background:var(--acc);box-shadow:0 0 6px var(--acc);cursor:pointer;
+}
+
+/* toggle */
+.trow{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.tlbl{font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--mut)}
+
+.tog{position:relative;width:34px;height:18px;flex-shrink:0}
+.tog input{opacity:0;width:0;height:0}
+
+.ttrack{
+  position:absolute;inset:0;
+  background:var(--sf2);
+  border:1px solid var(--bd);
+  border-radius:18px;
+  cursor:pointer;
+  transition:all 0.2s;
+}
+
+.ttrack::after{
+  content:'';
+  position:absolute;
+  top:2px;left:2px;
+  width:12px;height:12px;
+  border-radius:50%;
+  background:var(--mut);
+  transition:all 0.2s;
+}
+
+.tog input:checked+.ttrack{
+  border-color:var(--acc);
+  background:rgba(255,255,255,0.06);
+}
+.tog input:checked+.ttrack::after{
+  transform:translateX(16px);
+  background:var(--acc);
+  box-shadow:0 0 6px var(--acc);
+}
+
+/* compressor preset buttons */
+.presets{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:5px;
+  margin-bottom:14px;
+}
+
+.pbtn{
+  padding:7px 2px;
+  background:var(--sf2);
+  border:1px solid var(--bd);
+  border-radius:5px;
+  color:var(--mut);
+  font-family:var(--mono);
+  font-size:9px;
+  text-transform:uppercase;
+  letter-spacing:0.04em;
+  cursor:pointer;
+  text-align:center;
+  transition:all 0.15s;
+}
+.pbtn:hover{border-color:rgba(255,255,255,0.14);color:var(--txt)}
+.pbtn.on{
+  border-color:var(--acc);
+  color:var(--acc);
+  background:rgba(255,255,255,0.04);
+}
+
+/* compression meter */
+.meter-hdr{
+  display:flex;
+  justify-content:space-between;
+  font-size:9px;
+  text-transform:uppercase;
+  letter-spacing:0.1em;
+  color:var(--mut);
+  margin-bottom:7px;
+}
+
+.meter-track{
+  height:5px;
+  background:var(--sf2);
+  border-radius:3px;
+  overflow:hidden;
+  margin-bottom:10px;
+}
+
+.meter-fill{
+  height:100%;width:0%;
+  background:linear-gradient(90deg,#22c97a,#3b9eff,#a855f7);
+  border-radius:3px;
+  transition:width 0.08s linear;
+}
+
+.meter-val{
+  text-align:center;
+  font-family:var(--dsp);
+  font-weight:900;
+  font-size:28px;
+  color:var(--acc);
+  transition:color 0.3s;
+  line-height:1;
+}
+
+.meter-unit{
+  font-family:var(--mono);
+  font-weight:400;
+  font-size:10px;
+  color:var(--mut);
+  margin-left:3px;
+}
+
+.cstats{
+  display:none;
+  grid-template-columns:1fr 1fr;
+  gap:5px;
+  margin-top:10px;
+}
+
+.cstat{
+  background:var(--sf2);
+  border-radius:5px;
+  padding:7px 8px;
+  text-align:center;
+}
+
+.cstat-v{
+  font-family:var(--dsp);
+  font-weight:700;
+  font-size:13px;
+  color:var(--txt);
+}
+
+.cstat-l{
+  font-size:8px;
+  text-transform:uppercase;
+  letter-spacing:0.08em;
+  color:var(--mut);
+  margin-top:2px;
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hdr">
+    <div class="hdr-left">
+      <h1>CHROMATIC NOISE</h1>
+      <p>Colour Noise Studio &nbsp;·&nbsp; Web Audio Engine</p>
+    </div>
+    <div class="hdr-beacon" id="beacon"></div>
+  </header>
+
+  <div class="ngrid" id="ngrid"></div>
+
+  <div class="info" id="info">
+    <div class="info-name" id="iName"></div>
+    <div class="info-spec" id="iSpec"></div>
+    <div class="info-def"  id="iDef"></div>
+    <div class="tags"      id="iTags"></div>
+  </div>
+
+  <div class="viz"><canvas id="cv"></canvas></div>
+
+  <div class="play-wrap">
+    <button class="play" id="playBtn" onclick="togglePlay()" title="Play / Stop">
+      <svg id="playIco" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+    </button>
+  </div>
+
+  <div class="ctrls">
+
+    <!-- MASTER -->
+    <div class="panel">
+      <div class="ptitle"><span class="pdot"></span>Master</div>
+      <div class="cg">
+        <div class="cl">Volume <span class="cv" id="vv">70%</span></div>
+        <input type="range" id="vol" min="0" max="100" value="70" oninput="onVol(this)">
+      </div>
+    </div>
+
+    <!-- TREMOLO -->
+    <div class="panel">
+      <div class="ptitle"><span class="pdot"></span>Tremolo</div>
+      <div class="trow">
+        <span class="tlbl">Enable</span>
+        <label class="tog">
+          <input type="checkbox" id="tOn" onchange="onTremolo()">
+          <span class="ttrack"></span>
+        </label>
+      </div>
+      <div class="cg">
+        <div class="cl">Speed <span class="cv" id="tsv">1.0s / cycle</span></div>
+        <input type="range" id="tspd" min="0.1" max="10" step="0.1" value="1.0" oninput="onTremolo()">
+      </div>
+      <div class="cg">
+        <div class="cl">Strength <span class="cv" id="tstv">50%</span></div>
+        <input type="range" id="tstr" min="1" max="100" value="50" oninput="onTremolo()">
+      </div>
+    </div>
+
+    <!-- COMPRESSOR -->
+    <div class="panel">
+      <div class="ptitle"><span class="pdot"></span>Compressor</div>
+      <div class="presets" id="presets">
+        <button class="pbtn on" data-mode="off">Off</button>
+        <button class="pbtn"    data-mode="default">Default</button>
+        <button class="pbtn"    data-mode="min">Min</button>
+        <button class="pbtn"    data-mode="max">Max</button>
+      </div>
+      <div class="meter-hdr">
+        <span>Gain Reduction</span>
+        <span id="cml">BYPASSED</span>
+      </div>
+      <div class="meter-track"><div class="meter-fill" id="cmf"></div></div>
+      <div class="meter-val" id="cmv">0.0<span class="meter-unit">dB GR</span></div>
+      <div class="cstats" id="cstats">
+        <div class="cstat"><div class="cstat-v" id="cs-thr">—</div><div class="cstat-l">Threshold</div></div>
+        <div class="cstat"><div class="cstat-v" id="cs-rat">—</div><div class="cstat-l">Ratio</div></div>
+        <div class="cstat"><div class="cstat-v" id="cs-att">—</div><div class="cstat-l">Attack</div></div>
+        <div class="cstat"><div class="cstat-v" id="cs-rel">—</div><div class="cstat-l">Release</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  DATA
+// ═══════════════════════════════════════════════════════════════
+const NOISES = [
+  {
+    id:'white', lbl:'White', c:'#ededf0',
+    spec:'Flat spectrum · Equal power at every frequency',
+    def:'White noise distributes equal energy across every frequency in the audible spectrum simultaneously — analogous to white light containing all visible wavelengths. The power per hertz is constant, so higher octaves (which contain more hertz) receive more total energy, giving it its distinctly bright, dense, hissy character. Familiar from untuned radios, TV static, and ventilation fans.',
+    uses:['Sleep & sound masking','Focus & study','Audio equipment testing','Tinnitus symptom relief','Office noise masking']
+  },
+  {
+    id:'pink', lbl:'Pink', c:'#ff6eb4',
+    spec:'1/f spectrum · −3 dB per octave rise',
+    def:'Pink noise delivers equal power per octave rather than per hertz — as frequency doubles, power halves (−3 dB). It follows the pervasive 1/f pattern found throughout nature, music, and human cognition. Perceptually balanced and warm, it closely resembles steady rainfall, rustling leaves, or a mountain stream. Most audio engineers consider it the most natural-sounding noise type.',
+    uses:['Sleep & deep relaxation','Memory consolidation','Loudspeaker break-in','EQ & acoustic reference','Meditation & mindfulness']
+  },
+  {
+    id:'violet', lbl:'Violet', c:'#a855f7',
+    spec:'f² spectrum · +6 dB per octave · Inverse Brownian',
+    def:'Violet noise (purple noise) is the spectral mirror image of brown noise — its power density increases by +6 dB with each octave, sharply emphasising high frequencies. The result is an intensely bright, airy, sibilant sound saturated with treble energy. In audiology and hearing science it is used specifically for masking high-pitched tinnitus and testing the upper limits of human hearing range.',
+    uses:['High-frequency tinnitus masking','Audiology & hearing tests','Upper hearing-range assessment','High-freq audio dithering','Signal differentiation research']
+  },
+  {
+    id:'blue', lbl:'Blue', c:'#3b9eff',
+    spec:'f spectrum · +3 dB per octave · Inverse Pink',
+    def:'Blue noise (azure noise) has power that increases proportionally with frequency at +3 dB per octave — the direct spectral opposite of pink noise. It sounds bright and airy with a noticeably reduced bass presence. In digital imaging and printing, blue noise dithering produces visually pleasing, spatially uniform patterns that the human visual system processes with far less perceived noise than white or ordered dithering.',
+    uses:['Audio & image dithering','Halftone printing','Anti-aliasing textures','High-frequency masking','Laser print quality']
+  },
+  {
+    id:'green', lbl:'Green', c:'#22c97a',
+    spec:'Mid-band emphasis · ~500 Hz centre · Nature\'s frequency',
+    def:'Green noise concentrates its energy in the mid-frequency range centred around 500 Hz — the geometric midpoint of human hearing and the dominant spectral region of natural outdoor environments. Sometimes called "nature\'s noise," its character closely resembles the ambient background of a forest, coastal shoreline, or open meadow. The mid-frequency warmth makes it distinctly organic and calming to human listeners.',
+    uses:['Nature soundscapes','Deep relaxation','Anxiety & stress reduction','Biophilic design','Ambient background audio']
+  },
+  {
+    id:'grey', lbl:'Grey', c:'#9ca3af',
+    spec:'Equal-loudness weighted · Psychoacoustic flat response',
+    def:'Grey noise is spectrally shaped by applying the inverse of the human equal-loudness contour (Fletcher–Munson curve) to white noise. Because our ears are not equally sensitive across frequencies, white noise sounds perceptually uneven. Grey noise corrects for this — its spectrum is deliberately boosted where our hearing is less sensitive and cut where it is most sensitive — producing noise that sounds perfectly flat and uniform to the human ear.',
+    uses:['Psychoacoustic research','Equal-loudness assessment','Therapeutic sound design','Acoustic calibration','Perceptual audio engineering']
+  },
+  {
+    id:'brown', lbl:'Brown', c:'#c8845a',
+    spec:'1/f² spectrum · −6 dB per octave · Brownian motion',
+    def:'Brown noise (Brownian noise or red noise) has power that decreases at −6 dB per octave — twice as steep as pink noise — giving it a rich, heavy, bass-dominated character. Named for Brownian motion (the random walk of particles), where each sample equals the previous value plus a small random increment. Its sonic identity resembles distant thunder, heavy rainfall, or the low-frequency rumble of a powerful engine. Many find it uniquely effective for deep focus.',
+    uses:['Deep focus & ADHD support','Sleep induction','Low-frequency tinnitus masking','Storm & weather ambience','Anxiety & nervous system regulation']
+  },
+  {
+    id:'black', lbl:'Black', c:'#44445c',
+    spec:'Near-silence · Power → 0 · Sporadic faint transients',
+    def:'Black noise is fundamentally the absence of sound — an ambient near-silence floor whose power spectral density approaches zero across all frequencies. It represents the quietest conceivable acoustic environment: the background noise floor of deep space, a professional anechoic chamber, or the threshold of human perception. Some definitions include occasional imperceptible soft transients. Paradoxically, immersion in near-silence can dramatically heighten present-moment awareness and sensory sensitivity.',
+    uses:['Mindfulness & presence practice','Ultra-deep meditation','Sleep onset facilitation','Sensory awareness training','Noise floor reference']
+  }
+];
+
+const COMP_PRESETS = {
+  off:     null,
+  default: { thr:-24, knee:30, ratio:4,  att:0.003,  rel:0.25  },
+  min:     { thr:-10, knee:40, ratio:2,  att:0.02,   rel:0.5   },
+  max:     { thr:-40, knee:5,  ratio:20, att:0.0001, rel:0.1   }
+};
+
+const COMP_LABEL = {
+  off:'BYPASSED', default:'STANDARD', min:'GENTLE', max:'HARD LIMIT'
+};
+
+// ═══════════════════════════════════════════════════════════════
+//  AUDIO WORKLET (runs in separate thread — no drop-outs)
+// ═══════════════════════════════════════════════════════════════
+const WORKLET_SRC = `
+class NoiseProc extends AudioWorkletProcessor {
+  constructor(opts) {
+    super();
+    this.t = (opts.processorOptions||{}).type || 'white';
+    this.p  = [0,0,0,0,0,0,0]; // pink filter state
+    this.br = 0;                // brown last sample
+    this.bl = 0;                // blue  last white
+    this.vw = 0; this.vd = 0;  // violet last white / diff
+    this.glp= 0; this.gbp= 0;  // green SVF state
+    this.grl= 0;                // grey last
+    this.port.onmessage = e => { if(e.data.t) this.t = e.data.t; };
+  }
+
+  process(_, outputs) {
+    const out = outputs[0][0];
+    if (!out) return true;
+    const p = this.p;
+
+    for (let i = 0; i < out.length; i++) {
+      const w = Math.random() * 2 - 1;
+      let s = 0;
+
+      switch (this.t) {
+
+        case 'white':
+          s = w * 0.55;
+          break;
+
+        case 'pink':
+          p[0] = 0.99886*p[0] + w*0.0555179;
+          p[1] = 0.99332*p[1] + w*0.0750759;
+          p[2] = 0.96900*p[2] + w*0.1538520;
+          p[3] = 0.86650*p[3] + w*0.3104856;
+          p[4] = 0.55000*p[4] + w*0.5329522;
+          p[5] = -0.7616*p[5] - w*0.0168980;
+          s = (p[0]+p[1]+p[2]+p[3]+p[4]+p[5]+p[6] + w*0.5362) * 0.11;
+          p[6] = w * 0.115926;
+          break;
+
+        case 'brown':
+          this.br = (this.br + 0.02 * w) / 1.02;
+          s = this.br * 3.5;
+          break;
+
+        case 'blue':
+          s = (w - this.bl) * 0.52;
+          this.bl = w;
+          break;
+
+        case 'violet': {
+          const d = w - this.vw;
+          s = (d - this.vd) * 0.36;
+          this.vd = d; this.vw = w;
+          break;
+        }
+
+        case 'green': {
+          // State-variable bandpass centred ~500 Hz (f=2sin(π·500/44100)≈0.071)
+          const f = 0.071, Q = 0.5;
+          const hp = w - this.glp - (1/Q)*this.gbp;
+          this.gbp += f * hp;
+          this.glp += f * this.gbp;
+          s = this.gbp * 2.4;
+          break;
+        }
+
+        case 'grey':
+          // Rough equal-loudness inverse: boost lows, attenuate sensitive mids
+          this.grl = 0.97 * this.grl + 0.03 * w;
+          s = (w + this.grl * 2.8) * 0.20;
+          break;
+
+        case 'black':
+          // Near-silence with extremely rare soft transients
+          s = Math.random() > 0.9998 ? (Math.random()*2-1)*0.22 : w*0.0018;
+          break;
+      }
+
+      out[i] = Math.max(-1, Math.min(1, s));
+    }
+    return true;
+  }
+}
+registerProcessor('np', NoiseProc);
+`;
+
+// ═══════════════════════════════════════════════════════════════
+//  AUDIO STATE
+// ═══════════════════════════════════════════════════════════════
+let ctx = null;
+let masterGain = null, tremoloGain = null;
+let lfoNode = null, lfoGainNode = null;
+let compNode = null, analyser = null, noiseNode = null;
+let playing = false, curNoise = 0, compMode = 'off';
+
+async function ensureCtx() {
+  if (ctx) return;
+  ctx = new (window.AudioContext || window.webkitAudioContext)();
+
+  const blob = new Blob([WORKLET_SRC], { type: 'application/javascript' });
+  const url  = URL.createObjectURL(blob);
+  await ctx.audioWorklet.addModule(url);
+  URL.revokeObjectURL(url);
+
+  masterGain  = ctx.createGain();
+  masterGain.gain.value = parseFloat(document.getElementById('vol').value) / 100;
+
+  tremoloGain = ctx.createGain();
+  tremoloGain.gain.value = 1;
+
+  compNode = ctx.createDynamicsCompressor();
+
+  analyser = ctx.createAnalyser();
+  analyser.fftSize = 2048;
+  analyser.smoothingTimeConstant = 0.84;
+
+  masterGain.connect(analyser);
+  analyser.connect(ctx.destination);
+}
+
+function buildGraph() {
+  // Tear down
+  if (noiseNode)   try { noiseNode.disconnect();   } catch(e){}
+  try { tremoloGain.disconnect(); } catch(e){}
+  try { compNode.disconnect();    } catch(e){}
+
+  // Fresh noise worklet node
+  noiseNode = new AudioWorkletNode(ctx, 'np', {
+    processorOptions: { type: NOISES[curNoise].id }
+  });
+
+  noiseNode.connect(tremoloGain);
+
+  if (compMode !== 'off') {
+    const p = COMP_PRESETS[compMode];
+    compNode.threshold.value = p.thr;
+    compNode.knee.value      = p.knee;
+    compNode.ratio.value     = p.ratio;
+    compNode.attack.value    = p.att;
+    compNode.release.value   = p.rel;
+    tremoloGain.connect(compNode);
+    compNode.connect(masterGain);
+  } else {
+    tremoloGain.connect(masterGain);
+  }
+}
+
+function applyTremolo() {
+  // Clear old LFO
+  if (lfoNode)     { try { lfoNode.stop(); } catch(e){} lfoNode.disconnect();    lfoNode    = null; }
+  if (lfoGainNode) { lfoGainNode.disconnect(); lfoGainNode = null; }
+
+  const on  = document.getElementById('tOn').checked;
+  tremoloGain.gain.cancelScheduledValues(ctx.currentTime);
+
+  if (!on) { tremoloGain.gain.value = 1; return; }
+
+  const spd  = parseFloat(document.getElementById('tspd').value); // seconds per cycle
+  const str  = parseInt(document.getElementById('tstr').value) / 100;
+  const freq = 1 / spd;
+
+  // Base = 1 - str/2, LFO amplitude = str/2
+  // → gain oscillates between (1-str) and 1
+  tremoloGain.gain.value = 1 - str * 0.5;
+
+  lfoNode = ctx.createOscillator();
+  lfoNode.type = 'sine';
+  lfoNode.frequency.value = freq;
+
+  lfoGainNode = ctx.createGain();
+  lfoGainNode.gain.value = str * 0.5;
+
+  lfoNode.connect(lfoGainNode);
+  lfoGainNode.connect(tremoloGain.gain);
+  lfoNode.start();
+}
+
+async function togglePlay() {
+  try { await ensureCtx(); } catch(e) {
+    alert('AudioWorklet not supported. Please use Chrome, Firefox, or Safari 15+.');
+    return;
+  }
+  if (ctx.state === 'suspended') await ctx.resume();
+
+  if (playing) {
+    if (lfoNode)     { try { lfoNode.stop(); } catch(e){} lfoNode.disconnect();    lfoNode    = null; }
+    if (lfoGainNode) { lfoGainNode.disconnect(); lfoGainNode = null; }
+    if (noiseNode)   { try { noiseNode.disconnect(); } catch(e){} noiseNode = null; }
+    try { tremoloGain.disconnect(); } catch(e){}
+    try { compNode.disconnect();    } catch(e){}
+    playing = false;
+  } else {
+    buildGraph();
+    applyTremolo();
+    playing = true;
+  }
+  updatePlayBtn();
+}
+
+function switchNoise(i) {
+  curNoise = i;
+  updateUI();
+  if (playing) { buildGraph(); applyTremolo(); }
+}
+
+// ── Controls ─────────────────────────────────────────────────────────────────
+
+function onVol(el) {
+  document.getElementById('vv').textContent = el.value + '%';
+  if (masterGain) masterGain.gain.value = parseInt(el.value) / 100;
+}
+
+function onTremolo() {
+  const spd = parseFloat(document.getElementById('tspd').value);
+  const str = parseInt(document.getElementById('tstr').value);
+  document.getElementById('tsv').textContent  = spd.toFixed(1) + 's / cycle';
+  document.getElementById('tstv').textContent = str + '%';
+  if (playing) applyTremolo();
+}
+
+document.getElementById('presets').addEventListener('click', e => {
+  const btn = e.target.closest('.pbtn');
+  if (!btn) return;
+  compMode = btn.dataset.mode;
+
+  document.querySelectorAll('.pbtn').forEach(b => b.classList.toggle('on', b === btn));
+  document.getElementById('cml').textContent = COMP_LABEL[compMode];
+
+  const stats = document.getElementById('cstats');
+  if (compMode === 'off') {
+    stats.style.display = 'none';
+  } else {
+    stats.style.display = 'grid';
+    const p = COMP_PRESETS[compMode];
+    document.getElementById('cs-thr').textContent = p.thr + ' dB';
+    document.getElementById('cs-rat').textContent = p.ratio + ':1';
+    document.getElementById('cs-att').textContent = (p.att * 1000).toFixed(1) + ' ms';
+    document.getElementById('cs-rel').textContent = (p.rel * 1000).toFixed(0) + ' ms';
+  }
+
+  if (playing) { buildGraph(); applyTremolo(); }
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  UI
+// ═══════════════════════════════════════════════════════════════
+function updatePlayBtn() {
+  const btn = document.getElementById('playBtn');
+  const ico = document.getElementById('playIco');
+  btn.classList.toggle('going', playing);
+  ico.innerHTML = playing
+    ? '<rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/>'
+    : '<path d="M8 5v14l11-7z"/>';
+}
+
+function updateUI() {
+  const n = NOISES[curNoise];
+  const c = n.c;
+
+  document.documentElement.style.setProperty('--acc', c);
+
+  document.querySelectorAll('.nc').forEach((el, i) =>
+    el.classList.toggle('on', i === curNoise));
+
+  document.getElementById('info').style.borderLeftColor = c;
+  document.getElementById('iName').textContent  = n.lbl + ' Noise';
+  document.getElementById('iName').style.color  = c;
+  document.getElementById('iSpec').textContent  = n.spec;
+  document.getElementById('iDef').textContent   = n.def;
+  document.getElementById('iTags').innerHTML    = n.uses.map(u => `<span class="tag">${u}</span>`).join('');
+
+  const b = document.getElementById('beacon');
+  b.style.background  = c;
+  b.style.boxShadow   = `0 0 10px 2px ${c}`;
+}
+
+// Build noise card grid
+const grid = document.getElementById('ngrid');
+NOISES.forEach((n, i) => {
+  const d = document.createElement('div');
+  d.className = 'nc' + (i === 0 ? ' on' : '');
+  d.style.setProperty('--c', n.c);
+  d.innerHTML = `<div class="ndot"></div><div class="nlbl">${n.lbl}</div>`;
+  d.onclick = () => switchNoise(i);
+  grid.appendChild(d);
+});
+updateUI();
+
+// ═══════════════════════════════════════════════════════════════
+//  VISUALISER
+// ═══════════════════════════════════════════════════════════════
+const cv = document.getElementById('cv');
+const cx = cv.getContext('2d');
+
+function resize() {
+  const r   = cv.getBoundingClientRect();
+  const dpr = devicePixelRatio || 1;
+  cv.width  = Math.round(r.width  * dpr);
+  cv.height = Math.round(r.height * dpr);
+}
+resize();
+window.addEventListener('resize', resize);
+
+function hexA(hex, a) {
+  if (!hex || hex.length < 7) return `rgba(255,255,255,${a})`;
+  const r = parseInt(hex.slice(1,3), 16);
+  const g = parseInt(hex.slice(3,5), 16);
+  const b = parseInt(hex.slice(5,7), 16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+function draw() {
+  requestAnimationFrame(draw);
+  const W = cv.width, H = cv.height;
+  cx.clearRect(0, 0, W, H);
+  cx.fillStyle = '#0d0d16';
+  cx.fillRect(0, 0, W, H);
+
+  const color = NOISES[curNoise].c;
+
+  if (!analyser || !playing) {
+    // idle line
+    cx.beginPath();
+    cx.strokeStyle = hexA(color, 0.18);
+    cx.lineWidth = 1;
+    cx.moveTo(0, H/2); cx.lineTo(W, H/2);
+    cx.stroke();
+    // idle center dot
+    cx.beginPath();
+    cx.arc(W/2, H/2, 2, 0, Math.PI*2);
+    cx.fillStyle = hexA(color, 0.4);
+    cx.fill();
+
+    document.getElementById('cmv').innerHTML = '0.0<span class="meter-unit">dB GR</span>';
+    document.getElementById('cmf').style.width = '0%';
+    return;
+  }
+
+  const freq = new Uint8Array(analyser.frequencyBinCount);
+  analyser.getByteFrequencyData(freq);
+
+  const bw = W / freq.length * 2.8;
+  for (let i = 0; i < freq.length; i++) {
+    const v = freq[i] / 255;
+    const h = v * H;
+    cx.fillStyle = hexA(color, 0.22 + v * 0.78);
+    cx.fillRect(i * bw, H - h, Math.max(bw - 0.8, 0.5), h);
+  }
+
+  // Compressor gain-reduction meter
+  if (compMode !== 'off' && compNode) {
+    const gr  = Math.abs(compNode.reduction || 0);
+    const pct = Math.min(gr / 30 * 100, 100);
+    document.getElementById('cmf').style.width = pct + '%';
+    document.getElementById('cmv').innerHTML   = gr.toFixed(1) + '<span class="meter-unit">dB GR</span>';
+  } else {
+    document.getElementById('cmf').style.width = '0%';
+    document.getElementById('cmv').innerHTML   = '0.0<span class="meter-unit">dB GR</span>';
+  }
+}
+draw();
+</script>
+</body>
+</html>
